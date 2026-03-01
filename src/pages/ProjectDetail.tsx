@@ -73,7 +73,9 @@ const ProjectDetail = () => {
     );
   }
 
-  const isProjectOwner = session ? project.creator.trim().toLowerCase() === session.name.trim().toLowerCase() : false;
+  const isProjectOwner = session
+    ? (project.creatorId ? project.creatorId === session.userId : project.creator.trim().toLowerCase() === session.name.trim().toLowerCase())
+    : false;
   const remainingAmount = Math.max(project.goal - project.raised, 0);
   const isFundingCompleted = remainingAmount <= 0;
 
@@ -351,9 +353,9 @@ const ProjectDetail = () => {
               </div>
 
               <div className="mb-6">
-                <label className="text-sm font-medium mb-2 block">Pay with Razorpay (Dummy)</label>
+                <label className="text-sm font-medium mb-2 block">Pay with Cashfree (Test Mode)</label>
                 <p className="text-xs text-muted-foreground mb-2">
-                  A secure Razorpay checkout popup will open. Test mode only, no real charge.
+                  A secure Cashfree checkout popup will open. Test mode only, no real charge.
                 </p>
                 <Input
                   type="number"
@@ -387,7 +389,7 @@ const ProjectDetail = () => {
                     animate={{ opacity: 1, y: 0 }}
                     className="text-primary text-sm mt-2 text-center"
                   >
-                    Payment successful via Razorpay dummy flow.
+                    Payment successful via Cashfree test flow.
                   </motion.p>
                 )}
               </div>

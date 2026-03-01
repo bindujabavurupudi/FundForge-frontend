@@ -124,33 +124,20 @@ interface ApiUpdate extends JsonObject {
   created_at?: string;
 }
 
-type RazorpayCheckoutResponse = {
-  razorpay_payment_id?: string;
-  razorpay_order_id?: string;
-  razorpay_signature?: string;
+type CashfreeCheckoutResult = {
+  error?: { message?: string };
+  paymentDetails?: { paymentMessage?: string; paymentStatus?: string };
 };
 
-type RazorpayOptions = {
-  key: string;
-  amount: number;
-  currency: string;
-  name: string;
-  description: string;
-  image?: string;
-  handler: (response: RazorpayCheckoutResponse) => void;
-  modal?: { ondismiss?: () => void };
-  prefill?: { name?: string; email?: string };
-  notes?: Record<string, string>;
-  theme?: { color?: string };
+type CashfreeInstance = {
+  checkout: (options: { paymentSessionId: string; redirectTarget?: "_modal" | "_self" }) => Promise<CashfreeCheckoutResult>;
 };
 
-type RazorpayInstance = { open: () => void };
-
-type RazorpayConstructor = new (options: RazorpayOptions) => RazorpayInstance;
+type CashfreeFactory = (options: { mode: "sandbox" | "production" }) => CashfreeInstance;
 
 declare global {
   interface Window {
-    Razorpay?: RazorpayConstructor;
+    Cashfree?: CashfreeFactory;
   }
 }
 
@@ -170,69 +157,26 @@ const writeJson = (key: string, value: unknown) => {
   localStorage.setItem(key, JSON.stringify(value));
 };
 
-const loadRazorpayScript = async () => {
-  if (typeof window === "undefined") return false;
-  if (window.Razorpay) return true;
-
-  const existing = document.querySelector<HTMLScriptElement>('script[data-razorpay="checkout"]');
-  if (existing) {
-    return new Promise<boolean>((resolve) => {
-      existing.addEventListener("load", () => resolve(Boolean(window.Razorpay)), { once: true });
-      existing.addEventListener("error", () => resolve(false), { once: true });
-    });
+const openCashfreeCheckout = async (paymentSessionId: string) => {
+  if (typeof window === "undefined" || !window.Cashfree) {
+    throw new Error("Cashfree SDK is not available.");
   }
 
-  return new Promise<boolean>((resolve) => {
-    const script = document.createElement("script");
-    script.src = "https://checkout.razorpay.com/v1/checkout.js";
-    script.async = true;
-    script.dataset.razorpay = "checkout";
-    script.onload = () => resolve(Boolean(window.Razorpay));
-    script.onerror = () => resolve(false);
-    document.body.appendChild(script);
-  });
-};
+  const mode = String(import.meta.env.VITE_CASHFREE_MODE ?? "sandbox").toLowerCase() === "production"
+    ? "production"
+    : "sandbox";
 
-const openRazorpayCheckout = async (params: {
-  keyId: string;
-  amount: number;
-  projectId: string;
-  orderId: string;
-  userName?: string;
-  userEmail?: string;
-}) => {
-  const ready = await loadRazorpayScript();
-  if (!ready || !window.Razorpay) {
-    throw new Error("Unable to load Razorpay checkout. Please check your internet and retry.");
+  const cashfree = window.Cashfree({ mode });
+  const result = await cashfree.checkout({
+    paymentSessionId,
+    redirectTarget: "_modal",
+  });
+
+  if (result?.error) {
+    throw new Error(result.error.message ?? "Payment failed in Cashfree checkout.");
   }
 
-  return new Promise<RazorpayCheckoutResponse>((resolve, reject) => {
-    const options: RazorpayOptions = {
-      key: params.keyId,
-      amount: Math.round(params.amount * 100),
-      currency: "INR",
-      name: "FundForge",
-      description: `Contribution for project ${params.projectId}`,
-      handler: (response) => resolve(response),
-      modal: {
-        ondismiss: () => reject(new Error("Payment cancelled.")),
-      },
-      prefill: {
-        name: params.userName,
-        email: params.userEmail,
-      },
-      notes: {
-        local_order_id: params.orderId,
-        project_id: params.projectId,
-      },
-      theme: {
-        color: "#0ea5e9",
-      },
-    };
-
-    const checkout = new window.Razorpay(options);
-    checkout.open();
-  });
+  return result;
 };
 
 const getErrorMessage = (error: unknown, fallback: string) =>
@@ -572,8 +516,8 @@ export const addCommentReply = async (projectId: string, commentId: string, payl
 };
 
 export const fundProject = async (projectId: string, amount: number, userId: string) => {
-  const order = await api<{ contributionId: string; razorpayOrderId: string; keyId: string }>(
-    "/payments/razorpay/order",
+  const order = await api<{ contributionId: string; cashfreeOrderId: string; paymentSessionId: string }>(
+    "/payments/cashfree/order",
     {
       method: "POST",
       body: JSON.stringify({ projectId, amount }),
@@ -581,23 +525,14 @@ export const fundProject = async (projectId: string, amount: number, userId: str
     true,
   );
 
-  const session = getAuthSession();
-  const checkoutResponse = await openRazorpayCheckout({
-    keyId: order.keyId || "rzp_test_dummy",
-    amount,
-    projectId,
-    orderId: order.razorpayOrderId,
-    userName: session?.name,
-    userEmail: session?.email,
-  });
+  await openCashfreeCheckout(order.paymentSessionId);
 
   const confirmation = await api<{ status: "succeeded" | "failed"; project: { raised_amount?: number | string; backers_count?: number | string } | null }>(
-    "/payments/razorpay/verify",
+    "/payments/cashfree/verify",
     {
       method: "POST",
       body: JSON.stringify({
-        razorpayOrderId: order.razorpayOrderId,
-        razorpayPaymentId: checkoutResponse.razorpay_payment_id,
+        cashfreeOrderId: order.cashfreeOrderId,
         simulate: "success",
       }),
     },
@@ -605,7 +540,7 @@ export const fundProject = async (projectId: string, amount: number, userId: str
   );
 
   if (confirmation.status !== "succeeded" || !confirmation.project) {
-    throw new Error("Razorpay dummy payment failed.");
+    throw new Error("Cashfree test payment failed.");
   }
 
   const projectData = confirmation.project;
