@@ -10,6 +10,7 @@ interface ProjectCardProps {
 
 const ProjectCard = ({ project, index = 0 }: ProjectCardProps) => {
   const percentFunded = Math.round((project.raised / project.goal) * 100);
+  const isProjectExpired = project.daysLeft <= 0;
 
   return (
     <motion.div
@@ -58,9 +59,15 @@ const ProjectCard = ({ project, index = 0 }: ProjectCardProps) => {
               <span className="flex items-center gap-1">
                 <Users className="h-3 w-3" /> {project.backers.toLocaleString()}
               </span>
-              <span className="flex items-center gap-1">
-                <Clock className="h-3 w-3" /> {project.daysLeft} days left
-              </span>
+              {isProjectExpired ? (
+                <span className="flex items-center gap-1 text-destructive font-semibold">
+                  <Clock className="h-3 w-3" /> Project Expired
+                </span>
+              ) : (
+                <span className="flex items-center gap-1">
+                  <Clock className="h-3 w-3" /> {project.daysLeft} days left
+                </span>
+              )}
             </div>
           </div>
         </div>

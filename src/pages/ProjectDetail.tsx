@@ -77,6 +77,7 @@ const ProjectDetail = () => {
     ? (project.creatorId ? project.creatorId === session.userId : project.creator.trim().toLowerCase() === session.name.trim().toLowerCase())
     : false;
   const remainingAmount = Math.max(project.goal - project.raised, 0);
+  const isProjectExpired = project.daysLeft <= 0;
   const isFundingCompleted = remainingAmount <= 0;
 
   const handleFund = async () => {
@@ -93,6 +94,10 @@ const ProjectDetail = () => {
     }
     if (!Number.isFinite(amount) || amount <= 0) {
       setFundError("Enter a valid contribution amount.");
+      return;
+    }
+    if (isProjectExpired) {
+      setFundError("Project is expired and no longer accepts contributions.");
       return;
     }
     if (isFundingCompleted) {
@@ -363,15 +368,20 @@ const ProjectDetail = () => {
                   value={fundAmount}
                   onChange={(e) => setFundAmount(e.target.value)}
                   className="bg-card border-border mb-3"
-                  disabled={isProjectOwner || isFundingCompleted || isFunding}
+                  disabled={isProjectOwner || isProjectExpired || isFundingCompleted || isFunding}
                 />
                 <Button
                   onClick={handleFund}
                   className="w-full gradient-primary text-primary-foreground font-semibold h-11 hover:opacity-90 transition-opacity"
-                  disabled={isProjectOwner || isFundingCompleted || isFunding}
+                  disabled={isProjectOwner || isProjectExpired || isFundingCompleted || isFunding}
                 >
                   {isFunding ? "Opening Secure Checkout..." : "Pay Securely"}
                 </Button>
+                {isProjectExpired && (
+                  <p className="text-xs text-destructive font-semibold mt-2 text-center">
+                    This project is expired and no longer accepting contributions.
+                  </p>
+                )}
                 {isFundingCompleted && (
                   <p className="text-xs text-muted-foreground mt-2 text-center">
                     Funding complete. This project is no longer accepting contributions.
