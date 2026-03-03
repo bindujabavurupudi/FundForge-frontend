@@ -52,12 +52,14 @@ Deployment:
 
 ## Installation
 
-### Clone the repository
+## Clone the Repository
 
-```bash
 git clone https://github.com/YOUR_USERNAME/fundforge.git
+cd fundforge
 
-Create a .env file in the root directory and add:
+## Create Environment File
+
+Create a `.env` file in the root directory and add the following:
 
 VITE_SUPABASE_URL=your_supabase_url
 VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
@@ -65,7 +67,9 @@ VITE_FIREBASE_API_KEY=your_firebase_api_key
 VITE_FIREBASE_AUTH_DOMAIN=your_auth_domain
 VITE_FIREBASE_PROJECT_ID=your_project_id
 
-Start the development server:
+⚠️ Do not commit your `.env` file to GitHub.
+
+## Start the Development Server
 
 npm run dev
 
@@ -73,7 +77,8 @@ The application will run at:
 
 http://localhost:5173
 
-Directory Structure
+## Directory Structure
+
 fundforge-frontend/
 ├── public/
 ├── src/
@@ -89,5 +94,3 @@ fundforge-frontend/
 ├── package.json
 ├── vite.config.ts
 └── README.md
-
-
