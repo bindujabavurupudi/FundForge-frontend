@@ -1,41 +1,90 @@
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { BarChart, Bar, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
-import { Sparkles } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import ProjectCard from "@/components/ProjectCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
   addProjectUpdate,
+  fetchMyProjects,
   getAuthSession,
-  getCreatedProjectsByUserId,
-  getProjects,
-  getRecommendedProjects,
+  getCreatedProjectsByUser,
+  type StoredProject,
 } from "@/lib/appStore";
 
 const Dashboard = () => {
   const session = getAuthSession();
+  const sessionUserId = session?.userId ?? "";
+  const sessionName = session?.name ?? "";
   const [selectedProjectId, setSelectedProjectId] = useState("");
   const [updateTitle, setUpdateTitle] = useState("");
   const [updateContent, setUpdateContent] = useState("");
   const [updateError, setUpdateError] = useState("");
+  const [createdProjects, setCreatedProjects] = useState<StoredProject[]>([]);
+  const [isLoadingProjects, setIsLoadingProjects] = useState(true);
+  const [projectsError, setProjectsError] = useState("");
   const [refreshTick, setRefreshTick] = useState(0);
 
-  const projects = useMemo(() => getProjects(), [refreshTick]);
-  const createdProjects = useMemo(
-    () => (session ? getCreatedProjectsByUserId(session.userId) : []),
-    [session, refreshTick],
-  );
+  useEffect(() => {
+    if (!sessionUserId) {
+      setCreatedProjects([]);
+      setIsLoadingProjects(false);
+      setProjectsError("");
+      return;
+    }
+    let mounted = true;
+    const loadMyProjects = async () => {
+      if (mounted) {
+        setIsLoadingProjects(true);
+        setProjectsError("");
+      }
+      try {
+        const items = await fetchMyProjects();
+        if (mounted) {
+          if (items.length > 0) {
+            setCreatedProjects(items);
+          } else if (sessionName) {
+            setCreatedProjects(getCreatedProjectsByUser(sessionName));
+          } else {
+            setCreatedProjects([]);
+          }
+        }
+      } catch (error: unknown) {
+        if (mounted) {
+          if (sessionName) {
+            setCreatedProjects(getCreatedProjectsByUser(sessionName));
+          } else {
+            setCreatedProjects([]);
+          }
+          setProjectsError(error instanceof Error ? error.message : "Unable to load your projects.");
+        }
+      } finally {
+        if (mounted) {
+          setIsLoadingProjects(false);
+        }
+      }
+    };
+    void loadMyProjects();
+    return () => {
+      mounted = false;
+    };
+  }, [refreshTick, sessionName, sessionUserId]);
 
-  // AI-Powered Recommendations for similar projects
-  const recommendedProjects = useMemo(() => {
-    if (!session) return [];
-    return getRecommendedProjects(session.userId, 3);
-  }, [session, projects]);
+  useEffect(() => {
+    if (!sessionUserId) return;
+    const interval = window.setInterval(() => {
+      setRefreshTick((tick) => tick + 1);
+    }, 15000);
+    const onFocus = () => setRefreshTick((tick) => tick + 1);
+    window.addEventListener("focus", onFocus);
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener("focus", onFocus);
+    };
+  }, [sessionUserId]);
 
   if (!session) {
     return <Navigate to="/signin" replace />;
@@ -46,7 +95,7 @@ const Dashboard = () => {
   const totalViews = createdProjects.reduce((sum, project) => sum + (project.views ?? 0), 0);
   const engagement = totalViews > 0 ? Math.round((totalBackers / totalViews) * 100) : 0;
 
-  const chartData = projects
+  const chartData = createdProjects
     .slice(0, 6)
     .map((project) => ({
       name: project.title.length > 12 ? `${project.title.slice(0, 12)}...` : project.title,
@@ -81,6 +130,16 @@ const Dashboard = () => {
           <h1 className="font-display text-4xl font-bold mb-2">Creator Dashboard</h1>
           <p className="text-muted-foreground mb-8">Track performance, engagement, and publish impact updates.</p>
         </motion.div>
+        {projectsError && (
+          <div className="mb-6 rounded-md border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+            {projectsError}
+          </div>
+        )}
+        {isLoadingProjects && (
+          <div className="mb-6 rounded-md border border-border bg-card px-4 py-3 text-sm text-muted-foreground">
+            Loading your projects...
+          </div>
+        )}
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           <div className="glass rounded-xl p-5">

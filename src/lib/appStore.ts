@@ -201,6 +201,14 @@ const upsertHistory = (userId: string, updateFn: (current: UserHistory) => UserH
 };
 
 const getSessionToken = async () => {
+  const authWithReady = firebaseAuth as typeof firebaseAuth & { authStateReady?: () => Promise<void> };
+  if (typeof authWithReady.authStateReady === "function") {
+    try {
+      await authWithReady.authStateReady();
+    } catch {
+      // Fall back to session token handling below.
+    }
+  }
   if (firebaseAuth.currentUser) {
     return firebaseAuth.currentUser.getIdToken();
   }
@@ -221,7 +229,11 @@ const api = async <T>(path: string, init: RequestInit = {}, auth = false): Promi
     headers.set("Authorization", `Bearer ${token}`);
   }
 
-  const res = await fetch(`${API_BASE}${path}`, { ...init, headers });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15000);
+  const res = await fetch(`${API_BASE}${path}`, { ...init, headers, signal: controller.signal }).finally(() => {
+    clearTimeout(timeout);
+  });
   const payload = await res.json().catch(() => ({}));
   if (!res.ok || payload?.ok === false) {
     throw new Error(payload?.error ?? "Request failed.");
@@ -344,6 +356,11 @@ export const fetchProjectById = async (projectId: string) => {
   const normalized = mapApiProject(data);
   mergeProjectIntoCache(normalized);
   return normalized;
+};
+
+export const fetchMyProjects = async () => {
+  const data = await api<{ items: ApiProject[] }>("/projects/me", {}, true);
+  return (data.items ?? []).map(mapApiProject);
 };
 
 export const incrementProjectView = (projectId: string) => {
