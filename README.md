@@ -7,8 +7,6 @@ A full-stack MERN-based crowdfunding web application that allows users to create
 ## Features
 
 - User authentication (Signup/Login)
-- Create new fundraising campaigns
-- View campaign details
 - Track funding progress dynamically
 - Responsive UI using Tailwind CSS
 - Protected routes for authenticated users
@@ -37,14 +35,14 @@ Database & Authentication:
 
 Deployment:
 - Netlify (Frontend)
-- Cloud-hosted backend (Render / similar)
+- Render
 
 ---
 
 ## Prerequisites
 
 - Node.js (v16 or higher recommended)
-- npm or yarn
+- npm
 - Supabase account
 - Firebase project setup
 
