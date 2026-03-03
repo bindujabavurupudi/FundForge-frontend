@@ -35,7 +35,7 @@ Database & Authentication:
 
 Deployment:
 - Netlify (Frontend)
-- Render
+- Render  (Backend)
 
 ---
 
