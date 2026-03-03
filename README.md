@@ -59,11 +59,11 @@ cd fundforge
 
 Create a `.env` file in the root directory and add the following:
 
-VITE_SUPABASE_URL=your_supabase_url
-VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
-VITE_FIREBASE_API_KEY=your_firebase_api_key
-VITE_FIREBASE_AUTH_DOMAIN=your_auth_domain
-VITE_FIREBASE_PROJECT_ID=your_project_id
+- VITE_SUPABASE_URL=your_supabase_url
+- VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+- VITE_FIREBASE_API_KEY=your_firebase_api_key
+- VITE_FIREBASE_AUTH_DOMAIN=your_auth_domain
+- VITE_FIREBASE_PROJECT_ID=your_project_id
 
 ⚠️ Do not commit your `.env` file to GitHub.
 
@@ -75,20 +75,5 @@ The application will run at:
 
 http://localhost:5173
 
-## Directory Structure
 
-fundforge-frontend/
-├── public/
-├── src/
-│   ├── components/
-│   ├── pages/
-│   ├── hooks/
-│   ├── services/
-│   ├── utils/
-│   ├── App.tsx
-│   ├── main.tsx
-│   └── index.css
-├── index.html
-├── package.json
-├── vite.config.ts
-└── README.md
+
